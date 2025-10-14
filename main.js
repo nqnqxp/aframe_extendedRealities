@@ -147,20 +147,63 @@ AFRAME.registerComponent('food-bowl', {
 // Toy Ball Component
 AFRAME.registerComponent('toy-ball', {
   init: function() {
+    this.originalPosition = { x: 3, y: 0.3, z: -2 };
+    this.isBouncing = false;
+    
+    // Add idle floating animation
+    this.el.setAttribute('animation__idle', {
+      property: 'position',
+      from: '3 0.3 -2',
+      to: '3 0.5 -2',
+      dur: 1000,
+      dir: 'alternate',
+      loop: true,
+      easing: 'easeInOutSine'
+    });
+    
     this.el.addEventListener('click', () => {
+      if (this.isBouncing) return;
+      
       console.log('Toy ball clicked!');
       playWithPet();
+      
+      this.isBouncing = true;
+      
+      // Stop idle animation
+      this.el.removeAttribute('animation__idle');
+      
+      // Reset to ground position first
+      this.el.setAttribute('position', this.originalPosition);
       
       // Make ball bounce
       this.el.setAttribute('animation__bounce', {
         property: 'position',
-        from: this.el.getAttribute('position'),
-        to: `${this.el.getAttribute('position').x} 2 ${this.el.getAttribute('position').z}`,
-        dur: 800,
+        from: '3 0.3 -2',
+        to: '3 2 -2',
+        dur: 400,
         dir: 'alternate',
         loop: 3,
         easing: 'easeInOutQuad'
       });
+      
+      // Restart idle animation after bounce completes
+      setTimeout(() => {
+        this.el.removeAttribute('animation__bounce');
+        this.el.setAttribute('position', this.originalPosition);
+        
+        // Restart idle floating
+        this.el.setAttribute('animation__idle', {
+          property: 'position',
+          from: '3 0.3 -2',
+          to: '3 0.5 -2',
+          dur: 1000,
+          dir: 'alternate',
+          loop: true,
+          easing: 'easeInOutSine'
+        });
+        
+        this.isBouncing = false;
+      }, 2400); // 400ms * 6 (3 loops * 2 for alternate)
     });
     
     // Add hover effect

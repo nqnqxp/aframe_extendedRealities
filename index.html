@@ -87,9 +87,7 @@
       
       <!-- Toy Ball -->
       <a-entity id="toy-ball" position="3 0.3 -2" class="clickable" toy-ball>
-        <a-sphere radius="0.3" color="#FFD700">
-          <a-animation attribute="position" from="0 0 0" to="0 0.2 0" dur="1000" direction="alternate" repeat="indefinite"></a-animation>
-        </a-sphere>
+        <a-sphere id="toy-ball-sphere" radius="0.3" color="#FFD700"></a-sphere>
         <!-- Label -->
         <a-plane position="0 0.8 0" rotation="-90 0 0" width="1.2" height="0.4" color="#FFF"></a-plane>
         <a-text value="TOY BALL\n(Click to Play)" position="0 0.82 0" align="center" color="#FF8C00" width="2" rotation="-90 0 0"></a-text>
