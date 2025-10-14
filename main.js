@@ -33,6 +33,16 @@ document.addEventListener('DOMContentLoaded', () => {
       localStorage.setItem('catName', petState.name);
     });
   }
+  
+  // Hidden debug shortcut: Press 'k' to decrease stats
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'k' || e.key === 'K') {
+      petState.hunger = Math.max(0, petState.hunger - 30);
+      petState.happiness = Math.max(0, petState.happiness - 20);
+      updateUI();
+      console.log(`⚡ Debug (K): Decreased stats! Hunger: ${petState.hunger}, Happiness: ${petState.happiness}`);
+    }
+  });
 });
 
 // Update UI
