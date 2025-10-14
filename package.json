@@ -1,0 +1,27 @@
+{
+  "name": "aframe_extendedrealities",
+  "version": "1.0.0",
+  "description": "A-Frame Extended Realities Project",
+  "homepage": "https://github.com/nqnqxp/aframe_extendedRealities#readme",
+  "bugs": {
+    "url": "https://github.com/nqnqxp/aframe_extendedRealities/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nqnqxp/aframe_extendedRealities.git"
+  },
+  "license": "ISC",
+  "author": "",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "aframe": "1.7.0"
+  },
+  "devDependencies": {
+    "vite": "^5.4.11"
+  }
+}
