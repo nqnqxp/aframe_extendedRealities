@@ -10,7 +10,7 @@
     <div id="ui-overlay">
       <div id="pet-status">
         <div id="cat-name-container">
-          <h2>🐱 <input type="text" id="cat-name-input" value="Whiskers" maxlength="20" /></h2>
+          <h2>🐱 <input type="text" id="cat-name-input" value="name your cat" maxlength="20" /></h2>
         </div>
         <div class="status-bar">
           <span>Happiness:</span>
@@ -23,7 +23,7 @@
       </div>
       <div id="instructions">
         <p>Click on items to interact!</p>
-        <p>🎾 Ball - Play | 🍖 Food Bowl - Feed</p>
+        <p>🎾 Ball - Play | 🍖 Food Bowl - Feed | 🔔 Bell - Call Cat</p>
       </div>
     </div>
 
@@ -39,7 +39,7 @@
       <a-entity light="type: directional; color: #FFF; intensity: 0.8" position="5 10 5"></a-entity>
       
       <!-- Pet (Cute Cat) -->
-      <a-entity id="pet" position="0 0.5 -3" rotation="0 180 0" pet-animations>
+      <a-entity id="pet" position="0 0.5 -3" rotation="0 180 0" pet-animations cat-walker>
         <!-- Body -->
         <a-box position="0 0 0" width="1" height="0.8" depth="1.6" color="#FFF8DC" rotation="0 0 0"></a-box>
         <!-- Head -->
@@ -47,8 +47,17 @@
         <!-- Pink Triangular Nose -->
         <a-cone position="0 0.5 -1.35" radius-bottom="0.065" radius-top="0" height="0.1" color="#FFB6C1" rotation="180 0 0"></a-cone>
         <!-- Blue Eyes -->
-        <a-sphere position="-0.2 0.6 -1.3" radius="0.1" color="#ADD8E6"></a-sphere>
-        <a-sphere position="0.2 0.6 -1.3" radius="0.1" color="#ADD8E6"></a-sphere>
+        <a-sphere id="left-eye" position="-0.2 0.6 -1.3" radius="0.1" color="#ADD8E6"></a-sphere>
+        <a-sphere id="right-eye" position="0.2 0.6 -1.3" radius="0.1" color="#ADD8E6"></a-sphere>
+        <!-- X marks for dead eyes (hidden by default) -->
+        <a-entity id="death-markers" visible="false">
+          <!-- Left X -->
+          <a-box position="-0.2 0.6 -1.37" width="0.2" height="0.03" depth="0.03" color="#000" rotation="20 0 45"></a-box>
+          <a-box position="-0.2 0.6 -1.37" width="0.2" height="0.03" depth="0.03" color="#000" rotation="20 0 -45"></a-box>
+          <!-- Right X -->
+          <a-box position="0.2 0.6 -1.37" width="0.2" height="0.03" depth="0.03" color="#000" rotation="20 0 45"></a-box>
+          <a-box position="0.2 0.6 -1.37" width="0.2" height="0.03" depth="0.03" color="#000" rotation="20 0 -45"></a-box>
+        </a-entity>
         <!-- Triangular Ears (Cat ears) -->
         <a-cone position="-0.25 1.0 -0.9" radius-bottom="0.15" radius-top="0.02" height="0.35" color="#FFF8DC" rotation="0 0 -15"></a-cone>
         <a-cone position="0.25 1.0 -0.9" radius-bottom="0.15" radius-top="0.02" height="0.35" color="#FFF8DC" rotation="0 0 15"></a-cone>
@@ -81,22 +90,41 @@
         <!-- Food in bowl -->
         <a-sphere id="food" position="0 0.15 0" radius="0.25" color="#8B4513" visible="true"></a-sphere>
         <!-- Label -->
-        <a-plane position="0 0.8 0" rotation="-90 0 0" width="1.2" height="0.4" color="#FFF"></a-plane>
-        <a-text value="FOOD BOWL\n(Click to Feed)" position="0 0.82 0" align="center" color="#FF0000" width="2" rotation="-90 0 0"></a-text>
+        <a-plane position="0 0.01 0.8" rotation="-90 0 0" width="1.2" height="0.4" color="#FFF"></a-plane>
+        <a-text value="FOOD BOWL\n(Click to Feed)" position="0 0.02 0.8" align="center" color="#FF0000" width="2" rotation="-90 0 0"></a-text>
       </a-entity>
       
       <!-- Toy Ball -->
       <a-entity id="toy-ball" position="3 0.3 -2" class="clickable" toy-ball>
         <a-sphere id="toy-ball-sphere" radius="0.3" color="#FFD700"></a-sphere>
-        <!-- Label -->
-        <a-plane position="0 0.8 0" rotation="-90 0 0" width="1.2" height="0.4" color="#FFF"></a-plane>
-        <a-text value="TOY BALL\n(Click to Play)" position="0 0.82 0" align="center" color="#FF8C00" width="2" rotation="-90 0 0"></a-text>
+      </a-entity>
+      
+      <!-- Toy Ball Label (separate to avoid animation) -->
+      <a-entity position="3 0.01 -1.2">
+        <a-plane rotation="-90 0 0" width="1.2" height="0.4" color="#FFF"></a-plane>
+        <a-text value="TOY BALL\n(Click to Play)" position="0 0.01 0" align="center" color="#FF8C00" width="2" rotation="-90 0 0"></a-text>
       </a-entity>
       
       <!-- Water Bowl -->
       <a-entity position="-3 0.1 -4">
         <a-cylinder radius="0.4" height="0.2" color="#4169E1"></a-cylinder>
         <a-text value="WATER" position="0 0.3 0" align="center" color="#000" scale="0.5 0.5 0.5"></a-text>
+      </a-entity>
+      
+      <!-- Bell to Call Cat -->
+      <a-entity id="cat-bell" position="0 0.3 -1" class="clickable" cat-bell>
+        <!-- Bell base -->
+        <a-cone id="bell-cone" radius-bottom="0.3" radius-top="0.05" height="0.4" color="#FFD700"></a-cone>
+        <!-- Bell top handle -->
+        <a-torus position="0 0.3 0" radius="0.1" radius-tubular="0.03" color="#FFD700"></a-torus>
+        <!-- Clapper -->
+        <a-sphere position="0 -0.1 0" radius="0.08" color="#C0C0C0"></a-sphere>
+      </a-entity>
+      
+      <!-- Bell Label (separate to avoid animation) -->
+      <a-entity position="0 0.01 -0.4">
+        <a-plane rotation="-90 0 0" width="1.2" height="0.4" color="#FFF"></a-plane>
+        <a-text value="BELL\n(Call Cat)" position="0 0.01 0" align="center" color="#FFD700" width="2" rotation="-90 0 0"></a-text>
       </a-entity>
       
       <!-- Pet Bed -->

@@ -8,7 +8,8 @@ const petState = {
   happiness: 80,
   hunger: 60,
   lastFed: Date.now(),
-  lastPlayed: Date.now()
+  lastPlayed: Date.now(),
+  isDead: false
 };
 
 // Handle cat name changes
@@ -45,10 +46,102 @@ function updateUI() {
   if (hungerBar) {
     hungerBar.style.width = `${petState.hunger}%`;
   }
+  
+  // Check if cat should die
+  if (!petState.isDead && (petState.happiness <= 0 || petState.hunger <= 0)) {
+    killCat();
+  }
+}
+
+// Kill the cat (sad!)
+function killCat() {
+  petState.isDead = true;
+  console.log('💀 Oh no! Your cat has died...');
+  
+  const pet = document.getElementById('pet');
+  const leftEye = document.getElementById('left-eye');
+  const rightEye = document.getElementById('right-eye');
+  const deathMarkers = document.getElementById('death-markers');
+  
+  if (pet && leftEye && rightEye && deathMarkers) {
+    // Hide the regular eyes
+    leftEye.setAttribute('visible', false);
+    rightEye.setAttribute('visible', false);
+    
+    // Show X marks
+    deathMarkers.setAttribute('visible', true);
+    
+    // Fall over on side (rotate 90 degrees on Z axis)
+    pet.setAttribute('animation__death', {
+      property: 'rotation',
+      to: '0 180 90',
+      dur: 2000,
+      easing: 'easeInOutQuad'
+    });
+    
+    // Slight drop
+    const currentPos = pet.getAttribute('position');
+    pet.setAttribute('animation__drop', {
+      property: 'position',
+      to: `${currentPos.x} 0.3 ${currentPos.z}`,
+      dur: 2000,
+      easing: 'easeInOutQuad'
+    });
+    
+    // Stop the cat walker
+    const catWalker = pet.components['cat-walker'];
+    if (catWalker) {
+      catWalker.walking = false;
+      catWalker.rotating = false;
+      catWalker.paused = true;
+    }
+    
+    // Show revival message after a moment
+    setTimeout(() => {
+      alert('💀 Your cat has died from neglect!\n\nFeed and play with your cat to keep it alive.\n\nRefresh the page to get a new cat.');
+    }, 2500);
+  }
+}
+
+// Revive the cat (for future use)
+function reviveCat() {
+  petState.isDead = false;
+  petState.happiness = 50;
+  petState.hunger = 50;
+  
+  const pet = document.getElementById('pet');
+  const leftEye = document.getElementById('left-eye');
+  const rightEye = document.getElementById('right-eye');
+  const deathMarkers = document.getElementById('death-markers');
+  
+  if (pet && leftEye && rightEye && deathMarkers) {
+    // Show regular eyes
+    leftEye.setAttribute('visible', true);
+    rightEye.setAttribute('visible', true);
+    
+    // Hide X marks
+    deathMarkers.setAttribute('visible', false);
+    
+    // Stand back up
+    pet.setAttribute('rotation', '0 180 0');
+    const currentPos = pet.getAttribute('position');
+    pet.setAttribute('position', `${currentPos.x} 0.5 ${currentPos.z}`);
+    
+    // Restart walker
+    const catWalker = pet.components['cat-walker'];
+    if (catWalker) {
+      catWalker.paused = false;
+    }
+  }
+  
+  updateUI();
+  console.log('✨ Your cat has been revived!');
 }
 
 // Feed the pet
 function feedPet() {
+  if (petState.isDead) return;
+  
   petState.hunger = Math.min(100, petState.hunger + 30);
   petState.happiness = Math.min(100, petState.happiness + 10);
   petState.lastFed = Date.now();
@@ -73,6 +166,8 @@ function feedPet() {
 
 // Play with the pet
 function playWithPet() {
+  if (petState.isDead) return;
+  
   petState.happiness = Math.min(100, petState.happiness + 25);
   petState.hunger = Math.max(0, petState.hunger - 10);
   petState.lastPlayed = Date.now();
@@ -241,81 +336,295 @@ AFRAME.registerComponent('pet-animations', {
   }
 });
 
-// Cat Walker Component - Makes cat walk around freely with random waypoints
+// Bell Component - Calls the cat to come
+AFRAME.registerComponent('cat-bell', {
+  init: function() {
+    this.el.addEventListener('click', () => {
+      console.log('🔔 Bell rung! Calling cat...');
+      
+      // Ring animation
+      const bellCone = document.getElementById('bell-cone');
+      if (bellCone) {
+        // Remove old animation first to reset it
+        bellCone.removeAttribute('animation__ring');
+        
+        // Small delay to ensure removal is processed
+        setTimeout(() => {
+          bellCone.setAttribute('animation__ring', {
+            property: 'rotation',
+            from: '0 0 -15',
+            to: '0 0 15',
+            dur: 100,
+            dir: 'alternate',
+            loop: 6,
+            easing: 'easeInOutQuad'
+          });
+          
+          // Reset rotation after animation completes
+          setTimeout(() => {
+            bellCone.setAttribute('rotation', '0 0 0');
+            bellCone.removeAttribute('animation__ring');
+          }, 1200); // 100ms * 6 loops * 2 (alternate)
+        }, 10);
+      }
+      
+      // Call the cat
+      callCatToBell();
+    });
+    
+    // Add hover effect
+    this.el.addEventListener('mouseenter', () => {
+      this.el.setAttribute('scale', '1.1 1.1 1.1');
+    });
+    
+    this.el.addEventListener('mouseleave', () => {
+      this.el.setAttribute('scale', '1 1 1');
+    });
+  }
+});
+
+// Function to call cat to the bell
+function callCatToBell() {
+  const pet = document.getElementById('pet');
+  const bell = document.getElementById('cat-bell');
+  
+  if (!pet || !bell || petState.isDead) return;
+  
+  const bellPos = bell.getAttribute('position');
+  const catWalker = pet.components['cat-walker'];
+  
+  if (catWalker) {
+    // Interrupt current walk
+    catWalker.walking = false;
+    catWalker.rotating = false;
+    catWalker.paused = true;
+    
+    // Set bell as target
+    catWalker.isCalled = true;
+    catWalker.targetPosition = { x: bellPos.x, z: bellPos.z };
+    catWalker.startPosition = { x: catWalker.currentPosition.x, z: catWalker.currentPosition.z };
+    
+    // Calculate direction to face the bell
+    const dx = bellPos.x - catWalker.currentPosition.x;
+    const dz = bellPos.z - catWalker.currentPosition.z;
+    let targetAngle = Math.atan2(dx, dz) * (180 / Math.PI) - 180;
+    
+    // Normalize angle
+    while (targetAngle > 180) targetAngle -= 360;
+    while (targetAngle < -180) targetAngle += 360;
+    
+    catWalker.targetRotation = targetAngle;
+    
+    // Calculate walk duration
+    const distance = Math.sqrt(dx * dx + dz * dz);
+    catWalker.walkDuration = distance * 2000; // Faster when called (2 sec per unit)
+    
+    // Start rotation
+    catWalker.rotating = true;
+    catWalker.rotateProgress = 0;
+    
+    console.log(`🐱 ${petState.name} is coming!`);
+  }
+}
+
+// Cat Walker Component - Makes cat walk around naturally with random paths and stops
 AFRAME.registerComponent('cat-walker', {
   init: function() {
-    this.isWalking = true;
+    this.walking = false;
+    this.rotating = false;
+    this.paused = false;
+    this.isCalled = false; // Whether cat is being called by bell
+    
+    // Get initial position from the entity
+    const startPos = this.el.getAttribute('position');
+    this.currentPosition = { x: startPos.x, y: 0.5, z: startPos.z };
+    this.targetPosition = null;
+    this.startPosition = null;
+    this.currentRotation = 180;
+    this.targetRotation = 180;
+    
+    this.walkProgress = 0;
+    this.rotateProgress = 0;
+    this.walkDuration = 0;
+    this.rotateDuration = 800;
+    
+    this.bobTime = 0;
+    
     this.bounds = {
-      minX: -20,
-      maxX: 20,
-      minZ: -20,
-      maxZ: 5
+      minX: -12,
+      maxX: 12,
+      minZ: -12,
+      maxZ: 0
     };
     
-    // Start walking to first random waypoint
-    this.walkToRandomWaypoint();
+    // Obstacle positions (objects to avoid)
+    this.obstacles = [
+      { x: -3, z: -2, radius: 1.2 },  // Food bowl
+      { x: 3, z: -2, radius: 1.2 },   // Toy ball
+      { x: -3, z: -4, radius: 1.2 },  // Water bowl
+      { x: 4, z: -5, radius: 1.5 },   // Pet bed
+      { x: -6, z: -6, radius: 2 },    // Cat tower
+      { x: 2, z: -4, radius: 0.8 },   // Small ball
+      { x: -2, z: -5, radius: 0.8 },  // Crinkle toy
+      { x: 1, z: -6, radius: 0.8 },   // Ring toy
+      { x: 0, z: -1, radius: 0.8 }    // Bell
+    ];
+    
+    // Wait a bit before starting
+    setTimeout(() => {
+      this.startNewWalk();
+    }, 2000);
+  },
+  
+  isValidWaypoint: function(x, z) {
+    // Check if waypoint is too close to any obstacle
+    for (let obstacle of this.obstacles) {
+      const dx = x - obstacle.x;
+      const dz = z - obstacle.z;
+      const distance = Math.sqrt(dx * dx + dz * dz);
+      
+      if (distance < obstacle.radius) {
+        return false;
+      }
+    }
+    return true;
   },
   
   getRandomWaypoint: function() {
-    // Generate a random point within bounds
-    return {
-      x: Math.random() * (this.bounds.maxX - this.bounds.minX) + this.bounds.minX,
-      z: Math.random() * (this.bounds.maxZ - this.bounds.minZ) + this.bounds.minZ
-    };
+    let attempts = 0;
+    let newX, newZ;
+    
+    // Try to find a valid waypoint (avoid obstacles)
+    do {
+      // Pick a point within 2-4 units away for more natural movement
+      const angle = Math.random() * Math.PI * 2;
+      const distance = Math.random() * 2 + 2; // 2-4 units (even shorter)
+      
+      newX = this.currentPosition.x + Math.cos(angle) * distance;
+      newZ = this.currentPosition.z + Math.sin(angle) * distance;
+      
+      // Keep within bounds
+      newX = Math.max(this.bounds.minX, Math.min(this.bounds.maxX, newX));
+      newZ = Math.max(this.bounds.minZ, Math.min(this.bounds.maxZ, newZ));
+      
+      attempts++;
+      
+      if (attempts > 20) {
+        // If we can't find a good spot, just pick something safe
+        newX = Math.random() * 10 - 5;
+        newZ = Math.random() * 6 - 8;
+        break;
+      }
+    } while (!this.isValidWaypoint(newX, newZ));
+    
+    return { x: newX, z: newZ };
   },
   
-  walkToRandomWaypoint: function() {
-    if (!this.isWalking) return;
+  startNewWalk: function() {
+    if (this.paused || this.walking || this.rotating || petState.isDead) return;
     
-    const nextPoint = this.getRandomWaypoint();
-    const currentPos = this.el.getAttribute('position');
+    this.targetPosition = this.getRandomWaypoint();
+    this.startPosition = { x: this.currentPosition.x, z: this.currentPosition.z };
     
     // Calculate direction to face
-    const dx = nextPoint.x - currentPos.x;
-    const dz = nextPoint.z - currentPos.z;
-    const angle = Math.atan2(dx, dz) * (180 / Math.PI);
+    const dx = this.targetPosition.x - this.currentPosition.x;
+    const dz = this.targetPosition.z - this.currentPosition.z;
     
-    // Calculate distance for duration (speed of movement)
+    // Subtract 180 because the cat's head faces -z direction in local space
+    let targetAngle = Math.atan2(dx, dz) * (180 / Math.PI) - 180;
+    
+    // Normalize angle
+    while (targetAngle > 180) targetAngle -= 360;
+    while (targetAngle < -180) targetAngle += 360;
+    
+    this.targetRotation = targetAngle;
+    
+    // Calculate walk duration based on distance
     const distance = Math.sqrt(dx * dx + dz * dz);
-    const duration = distance * 1500; // 1.5 seconds per unit (slower walking)
+    this.walkDuration = distance * 3000; // 3 seconds per unit (slower)
     
-    // Rotate to face direction
-    this.el.setAttribute('animation__rotate', {
-      property: 'rotation',
-      to: `0 ${angle} 0`,
-      dur: 500,
-      easing: 'easeInOutQuad'
-    });
+    // Start rotation first
+    this.rotating = true;
+    this.rotateProgress = 0;
     
-    // Walk to position
-    setTimeout(() => {
-      this.el.setAttribute('animation__walk', {
-        property: 'position',
-        to: `${nextPoint.x} 0.5 ${nextPoint.z}`,
-        dur: duration,
-        easing: 'linear'
-      });
+    console.log(`Cat walking from (${this.currentPosition.x.toFixed(1)}, ${this.currentPosition.z.toFixed(1)}) to (${this.targetPosition.x.toFixed(1)}, ${this.targetPosition.z.toFixed(1)})`);
+  },
+  
+  tick: function(time, deltaTime) {
+    if (!deltaTime || deltaTime > 100) return; // Skip large deltas
+    
+    // Handle rotation
+    if (this.rotating) {
+      this.rotateProgress += deltaTime;
+      const t = Math.min(this.rotateProgress / this.rotateDuration, 1);
       
-      // Add walking bob animation
-      this.el.setAttribute('animation__bob', {
-        property: 'position',
-        from: `${currentPos.x} 0.5 ${currentPos.z}`,
-        to: `${nextPoint.x} 0.55 ${nextPoint.z}`,
-        dur: 400,
-        dir: 'alternate',
-        loop: Math.ceil(duration / 800),
-        easing: 'easeInOutSine'
-      });
+      // Smooth interpolation
+      const easedT = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
       
-      // After reaching waypoint, pick a new random destination
-      setTimeout(() => {
-        // Random pause before next walk (cat is thinking where to go next!)
-        const pauseTime = Math.random() * 3000 + 1000; // 1-4 seconds
+      // Interpolate rotation smoothly
+      const rotDiff = this.targetRotation - this.currentRotation;
+      this.currentRotation += rotDiff * easedT * (deltaTime / this.rotateDuration);
+      this.el.object3D.rotation.y = this.currentRotation * Math.PI / 180;
+      
+      if (t >= 1) {
+        this.rotating = false;
+        this.currentRotation = this.targetRotation;
+        this.el.object3D.rotation.y = this.currentRotation * Math.PI / 180;
+        
+        // Start walking after rotation completes
+        this.walking = true;
+        this.walkProgress = 0;
+        this.bobTime = 0;
+      }
+    }
+    
+    // Handle walking
+    if (this.walking && this.targetPosition && this.startPosition) {
+      this.walkProgress += deltaTime;
+      const t = Math.min(this.walkProgress / this.walkDuration, 1);
+      
+      // Smooth linear interpolation from start to target
+      this.currentPosition.x = this.startPosition.x + (this.targetPosition.x - this.startPosition.x) * t;
+      this.currentPosition.z = this.startPosition.z + (this.targetPosition.z - this.startPosition.z) * t;
+      
+      // Add walking bob
+      this.bobTime += deltaTime * 0.005;
+      const bob = Math.sin(this.bobTime) * 0.03;
+      
+      // Set position directly
+      this.el.object3D.position.set(
+        this.currentPosition.x,
+        0.5 + bob,
+        this.currentPosition.z
+      );
+      
+      if (t >= 1) {
+        this.walking = false;
+        this.currentPosition.x = this.targetPosition.x;
+        this.currentPosition.z = this.targetPosition.z;
+        this.el.object3D.position.set(this.currentPosition.x, 0.5, this.currentPosition.z);
+        
+        // Check if cat was called by bell
+        if (this.isCalled) {
+          this.isCalled = false;
+          console.log('🐱 Cat arrived at bell!');
+          // Increase happiness for coming when called
+          petState.happiness = Math.min(100, petState.happiness + 5);
+          updateUI();
+        }
+        
+        // Pause before next walk
+        this.paused = true;
+        const pauseTime = Math.random() < 0.3 ? 
+          Math.random() * 4000 + 3000 : // Long pause
+          Math.random() * 2000 + 1000;  // Short pause
+        
         setTimeout(() => {
-          this.walkToRandomWaypoint();
+          this.paused = false;
+          this.startNewWalk();
         }, pauseTime);
-      }, duration);
-    }, 500);
+      }
+    }
   }
 });
 
